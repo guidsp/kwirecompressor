@@ -24,8 +24,8 @@ KwireAudioProcessor::KwireAudioProcessor()
         std::make_unique<juce::AudioParameterFloat>("compGain", "Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f),
         std::make_unique<juce::AudioParameterFloat>("compRatio", "Ratio", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f),
         std::make_unique<juce::AudioParameterFloat>("compThreshold", "Threshold", juce::NormalisableRange<float>(-24.0f, 0.0f, 0.1f), -12.0f),
-        std::make_unique<juce::AudioParameterFloat>("compAttack", "Attack", juce::NormalisableRange<float>(1.0f, 200.0f, 0.1f, 0.5f), 30.f),
-        std::make_unique<juce::AudioParameterFloat>("compRelease", "Release", juce::NormalisableRange<float>(1.0f, 800.f, 1.f, 0.5f), 15.f),
+        std::make_unique<juce::AudioParameterFloat>("compAttack", "Attack", juce::NormalisableRange<float>(0.1f, 200.0f, 0.1f, 0.4f), 20.f),
+        std::make_unique<juce::AudioParameterFloat>("compRelease", "Release", juce::NormalisableRange<float>(0.1f, 800.f, 0.1f, 0.4f), 10.f),
         std::make_unique<juce::AudioParameterFloat>("mix", "Mix", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f),
         std::make_unique<juce::AudioParameterFloat>("outGain", "Output Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f)
         }),

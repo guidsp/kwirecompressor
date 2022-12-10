@@ -20,7 +20,7 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
     compRatioKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " %", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     compThreshKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " db", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     compAttackKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " ms", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
-    compReleaseKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " ms", 7, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
+    compReleaseKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " ms", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     mixKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " %", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     outGainKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " db", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     inMeter(Colour(0xffac0000), Colour(0xff1b1b1b), 60, 5, true),
