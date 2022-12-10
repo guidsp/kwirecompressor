@@ -95,7 +95,7 @@ public:
 			for (int sample = 0; sample < block.getNumSamples(); ++sample)
 			{
 				//attenuation calculation
-				rawAttenuation[channel] = calcAttenuation(2.0f * ratio, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
+				rawAttenuation[channel] = calcAttenuation(ratio, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
 
 				//envelope follower
 				if (rawAttenuation[channel] > prevEnvelope[channel]) //release
@@ -138,7 +138,7 @@ private:
 	}
 
 	constexpr static float driveTimeInMS = 1100.f;
-	constexpr static float compKnee = 2.f;
+	constexpr static float compKnee = 5.f;
 
 	double sampleRate;
 

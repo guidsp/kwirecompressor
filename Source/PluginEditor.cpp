@@ -42,9 +42,6 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
     //fixed aspect ratio
     getConstrainer()->setFixedAspectRatio(ratio);
 
-    //not resizable
-    //setResizable(false, false); 
-
     //start timer
     Timer::startTimerHz(60);
 
