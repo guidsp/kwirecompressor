@@ -63,8 +63,8 @@ public:
 
 					float &wet = input;
 
-					float dryAmt = (2.f - ratio);
-					float wetAmt = (ratio - 1.f); //amount of OD according to ratio
+					float dryAmt = 2.0f - ratio;
+					float wetAmt = 1.0f - dryAmt;
 
 					channelData[channel][sample] = dry * dryAmt + wet * wetAmt;
 
@@ -95,7 +95,7 @@ public:
 			for (int sample = 0; sample < block.getNumSamples(); ++sample)
 			{
 				//attenuation calculation
-				rawAttenuation[channel] = calcAttenuation((ratio - 1.0f) * 2.0f + 1.0f, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
+				rawAttenuation[channel] = calcAttenuation((ratio - 1.0f) * 4.0f + 1.0f, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
 
 				//envelope follower
 				if (rawAttenuation[channel] > prevEnvelope[channel]) //release

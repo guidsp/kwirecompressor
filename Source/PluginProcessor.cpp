@@ -194,8 +194,12 @@ void KwireAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     //compress
     kwire.compress(osBlock);
 
+    osBlock.multiplyBy(0.8f);
+
     //overdrive
     kwire.overdrive(osBlock);
+
+    osBlock.multiplyBy(1.25f);
 
     //downsampling
     oversampler.processSamplesDown(block);
