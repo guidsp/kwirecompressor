@@ -95,7 +95,7 @@ public:
 			for (int sample = 0; sample < block.getNumSamples(); ++sample)
 			{
 				//attenuation calculation
-				rawAttenuation[channel] = calcAttenuation((ratio - 1.0f) * 4.0f + 1.0f, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
+				rawAttenuation[channel] = calcAttenuation((ratio - 1.0f) * 3.0f + 1.0f, threshold, Decibels::gainToDecibels(abs(channelData[channel][sample])), compKnee);
 
 				//envelope follower
 				if (rawAttenuation[channel] > prevEnvelope[channel]) //release
