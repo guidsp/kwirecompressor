@@ -15,7 +15,6 @@
 
 KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-    //knobs' default constructors
     compGainKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " db", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     compRatioKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " %", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     compThreshKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " db", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
@@ -23,9 +22,18 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
     compReleaseKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " ms", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     mixKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " %", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
     outGainKnob(ImageCache::getFromMemory(BinaryData::KnobStrip_png, BinaryData::KnobStrip_pngSize), 128, true, " db", 5, 1.0, juce::Slider::SliderStyle::RotaryVerticalDrag),
+    
     inMeter(Colour(0xffac0000), Colour(0xff1b1b1b), 60, 5, true),
     compMeter(Colour(0xffac0000), 60, 5, true),
-    compReductionMeter(Colour(0xffE2D6F3), Colour(0xff1b1b1b), 60, 5, false)
+    compReductionMeter(Colour(0xffE2D6F3), Colour(0xff1b1b1b), 60, 5, false),
+
+    compGainSliderAttach((*audioProcessor.treestate.getParameter("compGain")), compGainKnob, nullptr),
+    compRatioSliderAttach((*audioProcessor.treestate.getParameter("compRatio")), compRatioKnob, nullptr),
+    compThreshSliderAttach((*audioProcessor.treestate.getParameter("compThreshold")), compThreshKnob, nullptr),
+    compAttackSliderAttach((*audioProcessor.treestate.getParameter("compAttack")), compAttackKnob, nullptr),
+    compReleaseSliderAttach((*audioProcessor.treestate.getParameter("compRelease")), compReleaseKnob, nullptr),
+    mixSliderAttach((*audioProcessor.treestate.getParameter("mix")), mixKnob, nullptr),
+    outGainSliderAttach((*audioProcessor.treestate.getParameter("outGain")), outGainKnob, nullptr)
 {
     //plugin window size
     setSize(pluginWidth, pluginHeight);
@@ -65,7 +73,7 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
         0.1f
     );
 
-    compGainKnob.setValue(audioProcessor.compGain);
+    compGainKnob.setValue(audioProcessor.compGain->get());
     compGainKnob.showValue(true, 0.16);
     compGainKnob.addListener(this);
 
@@ -75,7 +83,7 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
         0.1f
     );
 
-    compRatioKnob.setValue(audioProcessor.compRatio);
+    compRatioKnob.setValue(audioProcessor.compRatio->get());
     compRatioKnob.showValue(true, 0.16);
     compRatioKnob.addListener(this);
 
@@ -85,27 +93,27 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
         0.1f
     );
 
-    compThreshKnob.setValue(audioProcessor.compThreshold);
+    compThreshKnob.setValue(audioProcessor.compThreshold->get());
     compThreshKnob.showValue(true, 0.16);
     compThreshKnob.addListener(this);
 
     compAttackKnob.setRange(
         audioProcessor.treestate.getParameter("compAttack")->getNormalisableRange().start,
         audioProcessor.treestate.getParameter("compAttack")->getNormalisableRange().end,
-        1
+        0.1f
     );
 
-    compAttackKnob.setValue(audioProcessor.compAttack);
+    compAttackKnob.setValue(audioProcessor.compAttack->get());
     compAttackKnob.showValue(true, 0.16);
     compAttackKnob.addListener(this);
 
     compReleaseKnob.setRange(
         audioProcessor.treestate.getParameter("compRelease")->getNormalisableRange().start,
         audioProcessor.treestate.getParameter("compRelease")->getNormalisableRange().end,
-        1
+        0.1f
     );
 
-    compReleaseKnob.setValue(audioProcessor.compRelease);
+    compReleaseKnob.setValue(audioProcessor.compRelease->get());
     compReleaseKnob.showValue(true, 0.16);
     compReleaseKnob.addListener(this);
 
@@ -115,7 +123,7 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
         0.1f
     );
 
-    mixKnob.setValue(audioProcessor.mix);
+    mixKnob.setValue(audioProcessor.mix->get());
     mixKnob.showValue(true, 0.16);
     mixKnob.addListener(this);
 
@@ -125,19 +133,10 @@ KwireAudioProcessorEditor::KwireAudioProcessorEditor(KwireAudioProcessor& p)
         0.1f
     );
 
-    outGainKnob.setValue(audioProcessor.outGain);
+    outGainKnob.setValue(audioProcessor.outGain->get());
     outGainKnob.showValue(true, 0.16);
     outGainKnob.addListener(this);
     
-    //attach treestate to the sliders; This connects to processor side
-    compGainSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "compGain", compGainKnob);
-    compRatioSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "compRatio", compRatioKnob);
-    compThreshSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "compThreshold", compThreshKnob);
-    compAttackSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "compAttack", compAttackKnob);
-    compReleaseSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "compRelease", compReleaseKnob);
-    mixSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "mix", mixKnob);
-    outGainSliderAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.treestate, "outGain", outGainKnob);
-
     //make BG image visible before the other components
     Component::addAndMakeVisible(bgImageComponentUnder); 
 
@@ -216,6 +215,7 @@ void KwireAudioProcessorEditor::resized()
 
 void KwireAudioProcessorEditor::sliderValueChanged(juce::Slider* slider) //this is where the value from the sliders gets passed to the variable
 {
+    /*
     if (slider == &compGainKnob)
         audioProcessor.compGain = compGainKnob.getValue();
     else if (slider == &compRatioKnob)
@@ -230,5 +230,6 @@ void KwireAudioProcessorEditor::sliderValueChanged(juce::Slider* slider) //this 
         audioProcessor.mix = mixKnob.getValue();
     else if (slider == &outGainKnob)
         audioProcessor.outGain = outGainKnob.getValue();
+        */
 }
 

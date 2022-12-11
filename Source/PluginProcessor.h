@@ -53,13 +53,13 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    float compGain,
-        compRatio,
-        compThreshold,
-        compAttack,
-        compRelease,
-        mix,
-        outGain;
+    juce::AudioParameterFloat *compGain,
+        *compRatio,
+        *compThreshold,
+        *compAttack,
+        *compRelease,
+        *mix,
+        *outGain;
 
     std::vector<juce::Atomic<float>> inAudio,
         inAudioPeak,
@@ -71,16 +71,15 @@ public:
     juce::AudioProcessorValueTreeState treestate;
 
 private:
-    float prevCompGain,
-        prevOutGain;
+    juce::AudioProcessorValueTreeState::ParameterLayout makeParams();
+
+    float prevCompGain = 0.0f,
+        prevOutGain = 0.0f;
    
     //Compressor
     K_Kwire<supportedChannels> kwire;
 
     juce::AudioBuffer<float> dryBuffer;
-
-    //Set up for OS
-    double lastSamplingRate{ 44100.0 };
 
     juce::dsp::Oversampling<float> oversampler, //Oversampler
         dryOversampler; 

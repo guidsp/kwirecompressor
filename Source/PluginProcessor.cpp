@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -20,24 +12,18 @@ KwireAudioProcessor::KwireAudioProcessor()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
     ),
-    treestate(*this, nullptr, "PARAMETERS", {  // Add parameters to the treestate
-        std::make_unique<juce::AudioParameterFloat>("compGain", "Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f),
-        std::make_unique<juce::AudioParameterFloat>("compRatio", "Ratio", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f),
-        std::make_unique<juce::AudioParameterFloat>("compThreshold", "Threshold", juce::NormalisableRange<float>(-24.0f, 0.0f, 0.1f), -12.0f),
-        std::make_unique<juce::AudioParameterFloat>("compAttack", "Attack", juce::NormalisableRange<float>(0.1f, 200.0f, 0.1f, 0.4f), 20.f),
-        std::make_unique<juce::AudioParameterFloat>("compRelease", "Release", juce::NormalisableRange<float>(0.1f, 800.f, 0.1f, 0.4f), 10.f),
-        std::make_unique<juce::AudioParameterFloat>("mix", "Mix", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f),
-        std::make_unique<juce::AudioParameterFloat>("outGain", "Output Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f)
-        }),
+    treestate(*this, nullptr, "PARAMETERS", makeParams()),
     oversampler(supportedChannels, osFactor, juce::dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple, true, true),
     dryOversampler(supportedChannels, osFactor, juce::dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple, true, true)
 #endif
 {
-    compGain = *treestate.getRawParameterValue("compGain");
-    compRatio = *treestate.getRawParameterValue("compRatio");
-    compThreshold = *treestate.getRawParameterValue("compThreshold");
-    compAttack = *treestate.getRawParameterValue("compAttack");
-    compRelease = *treestate.getRawParameterValue("compRelease");
+    compGain = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("compGain"));
+    compRatio = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("compRatio"));
+    compThreshold = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("compThreshold"));
+    compAttack = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("compAttack"));
+    compRelease = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("compRelease"));
+    mix = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("mix"));
+    outGain = dynamic_cast<juce::AudioParameterFloat*>(treestate.getParameter("outGain"));
 }
 
 KwireAudioProcessor::~KwireAudioProcessor()
@@ -107,20 +93,17 @@ void KwireAudioProcessor::changeProgramName (int index, const juce::String& newN
 }
 
 //==============================================================================
-void KwireAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    kwire.setupParams(compRatio, compThreshold, compAttack, compRelease, sampleRate);
+void KwireAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+    kwire.setupParams(compRatio->get(), compThreshold->get(), compAttack->get(), compRelease->get(), sampleRate);
 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
-
+    
     inAudio.resize(totalNumInputChannels);
     inAudioPeak.resize(totalNumInputChannels);
     compAudio.resize(totalNumInputChannels);
     compAudioPeak.resize(totalNumInputChannels);
     preCompAudio.resize(totalNumInputChannels);
-
-    lastSamplingRate = sampleRate;
 
     oversampler.numChannels = getTotalNumInputChannels(); //set os numchannels
     oversampler.setUsingIntegerLatency(true);
@@ -175,14 +158,10 @@ bool KwireAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 }
 #endif
 
-void KwireAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
+void KwireAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    //for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-     //   buffer.clear (i, 0, buffer.getNumSamples());
+    //auto totalNumOutputChannels = getTotalNumOutputChannels();
 
     //send input to in meter
     for (int channel = 0; channel < supportedChannels; ++channel) {
@@ -192,24 +171,25 @@ void KwireAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     //Make a copy of the buffer at this point
     dryBuffer.makeCopyOf(buffer);
+    //Point block to the buffer
+    juce::dsp::AudioBlock<float> block(buffer); 
+    //Point dry block at buffer copy before processing
+    juce::dsp::AudioBlock<float> dryBlock(dryBuffer); 
 
-    juce::dsp::AudioBlock<float> block(buffer); //point block to the buffer
-    juce::dsp::AudioBlock<float> dryBlock(dryBuffer); //Points dry block at buffer copy before processing
-
-    auto compGain_ = pow(10, compGain / 20);
+    auto compGain_ = pow(10, compGain->get() / 20.0f);
     buffer.applyGainRamp(0, buffer.getNumSamples(), prevCompGain, compGain_);
     prevCompGain = compGain_;
 
-    for (int channel = 0; channel < supportedChannels; ++channel) {
+    for (int channel = 0; channel < supportedChannels; ++channel)
         preCompAudio[channel].set(buffer.getRMSLevel(channel, 0, buffer.getNumSamples()));
-    }
 
-    auto& osBlock = oversampler.processSamplesUp(block); //make oversampled block
+    //make oversampled blocks
+    auto& osBlock = oversampler.processSamplesUp(block); 
     auto& dryOsBlock = dryOversampler.processSamplesUp(dryBlock);
 
     //update params
     //Ratio range (1 - 2)
-    kwire.updateParams(1.f + compRatio * 0.01f, compThreshold, compAttack, compRelease);
+    kwire.updateParams(1.f + compRatio->get() * 0.01f, compThreshold->get(), compAttack->get(), compRelease->get());
 
     //compress
     kwire.compress(osBlock);
@@ -227,19 +207,18 @@ void KwireAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     }
 
     //Mix
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
+    for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto* channelData = block.getChannelPointer(channel);
         auto* dryData = dryBlock.getChannelPointer(channel);
 
-        auto scaledMix = jlimit(0.f, 100.f, mix) * 0.01f;
+        auto scaledMix = jlimit(0.f, 100.f, mix->get()) * 0.01f;
         
        for (int sample = 0; sample < block.getNumSamples(); ++sample)
             channelData[sample] = channelData[sample] * scaledMix + dryData[sample] * (1.f - scaledMix);
     }
 
     //Out gain
-    auto outGain_ = pow(10, outGain / 20);
+    auto outGain_ = pow(10, outGain->get() / 20.0f);
     buffer.applyGainRamp(0, buffer.getNumSamples(), prevOutGain, outGain_);
     prevOutGain = outGain_;
 }
@@ -270,6 +249,21 @@ void KwireAudioProcessor::setStateInformation (const void* data, int sizeInBytes
     if (xmlState.get() != nullptr)
         if (xmlState->hasTagName(treestate.state.getType()))
             treestate.replaceState(juce::ValueTree::fromXml(*xmlState));
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout KwireAudioProcessor::makeParams() {
+
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("compGain", "Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("compRatio", "Ratio", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("compThreshold", "Threshold", juce::NormalisableRange<float>(-24.0f, 0.0f, 0.1f), -12.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("compAttack", "Attack", juce::NormalisableRange<float>(0.1f, 200.0f, 0.1f, 0.4f), 20.f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("compRelease", "Release", juce::NormalisableRange<float>(0.1f, 800.f, 0.1f, 0.4f), 10.f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("mix", "Mix", juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("outGain", "Output Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.1f), 0.0f));
+
+    return { params.begin(), params.end()};
 }
 
 //==============================================================================
